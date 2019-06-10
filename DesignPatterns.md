@@ -914,7 +914,7 @@ int main()
 
 ```c++
 /*
-* 模板模式实现的关键代码：在抽象类实现通用接口，细节变化在子类实现。
+* 关键代码：在抽象类实现通用接口，细节变化在子类实现。
 */
 
 #include <iostream>
@@ -990,3 +990,632 @@ int main()
 ```
 
 ## 7、建造者模式
+
+建造者模式：将复杂对象的构建和其表示分离，使得相同的构建过程可以产生不同的表示。
+
+以下情形可以考虑使用建造者模式：
+
+* 对象的创建复杂，但是其各个部分的子对象创建算法一定。
+* 需求变化大，构造复杂对象的子对象经常变化，但将其组合在一起的算法相对稳定。
+
+建造者模式的优点：
+
+* 将对象的创建和表示分离，客户端不需要了解具体的构建细节。
+* 增加新的产品对象时，只需要增加其具体的建造类即可，不需要修改原来的代码，扩展方便。
+
+产品之间差异性大，内部变化较大、较复杂时不建议使用建造者模式。
+
+```c++
+/*
+*关键代码：建造者类：创建和提供实例； Director类：管理建造出来的实例的依赖关系。
+*/
+
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+//具体的产品类
+class Order
+{
+public:
+	void setFood(const string& food)
+	{
+		m_strFood = food;
+	}
+
+	const string& food()
+	{
+		cout << m_strFood.data() << endl;
+		return m_strFood;
+	}
+	
+	void setDrink(const string& drink)
+	{
+		m_strDrink = drink;
+	}
+
+	const string& drink()
+	{
+		cout << m_strDrink << endl;
+		return m_strDrink;
+	}
+
+private:
+	string m_strFood;
+	string m_strDrink;
+};
+
+//抽象建造类，提供建造接口。
+class OrderBuilder
+{
+public:
+	virtual ~OrderBuilder()
+	{
+		cout << "~OrderBuilder()" << endl;
+	}
+	virtual void setOrderFood() = 0;
+	virtual void setOrderDrink() = 0;
+	virtual Order* getOrder() = 0;
+};
+
+//具体的建造类
+class VegetarianOrderBuilder : public OrderBuilder 
+{
+public:
+	VegetarianOrderBuilder()
+	{
+		m_pOrder = new Order;
+	}
+
+	~VegetarianOrderBuilder()
+	{
+		cout << "~VegetarianOrderBuilder()" << endl;
+		delete m_pOrder;
+		m_pOrder = nullptr;
+	}
+
+	void setOrderFood() override
+	{
+		m_pOrder->setFood("vegetable salad");
+	}
+
+	void setOrderDrink() override
+	{
+		m_pOrder->setDrink("water");
+	}
+
+	Order* getOrder() override
+	{
+		return m_pOrder;
+	}
+
+private:
+	Order* m_pOrder;
+};
+
+//具体的建造类
+class MeatOrderBuilder : public OrderBuilder
+{
+public:
+	MeatOrderBuilder()
+	{
+		m_pOrder = new Order;
+	}
+	~MeatOrderBuilder()
+	{
+		cout << "~MeatOrderBuilder()" << endl;
+		delete m_pOrder;
+		m_pOrder = nullptr;
+	}
+
+	void setOrderFood() override
+	{
+		m_pOrder->setFood("beef");
+	}
+
+	void setOrderDrink() override
+	{
+		m_pOrder->setDrink("beer");
+	}
+
+	Order* getOrder() override
+	{
+		return m_pOrder;
+	}
+
+private:
+	Order* m_pOrder;
+};
+
+//Director类，负责管理实例创建的依赖关系，指挥构建者类创建实例
+class Director
+{
+public:
+	Director(OrderBuilder* builder) : m_pOrderBuilder(builder)
+	{
+	}
+	void construct()
+	{
+		m_pOrderBuilder->setOrderFood();
+		m_pOrderBuilder->setOrderDrink();
+	}
+
+private:
+	OrderBuilder* m_pOrderBuilder;
+};
+
+
+int main()
+{
+//	MeatOrderBuilder* mBuilder = new MeatOrderBuilder;
+	OrderBuilder* mBuilder = new MeatOrderBuilder;  //注意抽象构建类必须有虚析构函数，解析时才会														 调用子类的析构函数
+	Director* director = new Director(mBuilder);
+	director->construct();
+	Order* order = mBuilder->getOrder();
+	order->food();
+	order->drink();
+
+	delete director;
+	director = nullptr;
+
+	delete mBuilder;
+	mBuilder = nullptr;
+
+	return 0;
+}
+```
+
+## 8、外观模式
+
+外观模式：为子系统中的一组接口定义一个一致的界面；外观模式提供一个高层的接口，这个接口使得这一子系统更加容易被使用；对于复杂的系统，系统为客户端提供一个简单的接口，把负责的实现过程封装起来，客户端不需要连接系统内部的细节。
+
+以下情形建议考虑外观模式：
+
+* 设计初期阶段，应有意识的将不同层分离，层与层之间建立外观模式。
+* 开发阶段，子系统越来越复杂，使用外观模式提供一个简单的调用接口。
+* 一个系统可能已经非常难易维护和扩展，但又包含了非常重要的功能，可以为其开发一个外观类，使得新系统可以方便的与其交互。
+
+优点：
+
+* 实现了子系统与客户端之间的松耦合关系。
+* 客户端屏蔽了子系统组件，减少了客户端所需要处理的对象数据，使得子系统使用起来更方便容易。
+* 更好的划分了设计层次，对于后期维护更加的容易。
+
+```C++
+/*
+* 关键代码：客户与系统之间加一个外观层，外观层处理系统的调用关系、依赖关系等。
+*以下实例以电脑的启动过程为例，客户端只关心电脑开机的、关机的过程，并不需要了解电脑内部子系统的启动过程。
+*/
+#include <iostream>
+
+using namespace std;
+
+//抽象控件类，提供接口
+class Control
+{
+public:
+	virtual void start() = 0;
+	virtual void shutdown() = 0;
+};
+
+//子控件， 主机
+class Host : public Control
+{
+public:
+	void start() override
+	{
+		cout << "Host start" << endl;
+	}
+	void shutdown() override
+	{
+		cout << "Host shutdown" << endl;
+	}
+};
+
+//子控件， 显示屏
+class LCDDisplay : public Control
+{
+public:
+	void start() override
+	{
+		cout << "LCD Display start" << endl;
+	}
+	void shutdown() override
+	{
+		cout << "LCD Display shutdonw" << endl;
+	}
+};
+
+//子控件， 外部设备
+class Peripheral : public Control
+{
+public:
+	void start() override
+	{
+		cout << "Peripheral start" << endl;
+	}
+	void shutdown() override
+	{
+		cout << "Peripheral shutdown" << endl;
+	}
+};
+
+class Computer
+{
+public:
+	void start()
+	{
+		m_host.start();
+		m_display.start();
+		m_peripheral.start();
+		cout << "Computer start" << endl;
+	}
+	void shutdown()
+	{
+		m_host.shutdown();
+		m_display.shutdown();
+		m_peripheral.shutdown();
+		cout << "Computer shutdown" << endl;
+	}
+private:
+	Host   m_host;
+	LCDDisplay m_display;
+	Peripheral   m_peripheral;
+};
+
+int main()
+{
+	Computer computer;
+	computer.start();
+
+	//do something
+
+	computer.shutdown();
+
+	return 0;
+}
+```
+
+## 9、组合模式
+
+组合模式：将对象组合成树形结构以表示“部分-整体”的层次结构，组合模式使得客户端对单个对象和组合对象的使用具有一直性。
+
+既然讲到以树形结构表示“部分-整体”，那可以将组合模式想象成一根大树，将大树分成树枝和树叶两部分，树枝上可以再长树枝，也可以长树叶，树叶上则不能再长出别的东西。
+
+以下情况可以考虑使用组合模式：
+
+* 希望表示对象的部分-整体层次结构。
+* 希望客户端忽略组合对象与单个对象的不同，客户端将统一的使用组合结构中的所有对象。
+
+```c++
+/*
+* 关键代码：树枝内部组合该接口，并且含有内部属性list，里面放Component。
+*/
+
+#include <iostream>
+#include <list>
+#include <memory>
+
+using namespace std;
+
+//抽象类，提供组合和单个对象的一致接口
+class Company
+{
+public:
+	Company(const string& name): m_name(name){}
+	virtual ~Company(){ cout << "~Company()" << endl;}
+
+	virtual void add(Company* ) = 0;
+	virtual void remove(const string&) = 0;
+	virtual void display(int depth) = 0;
+
+	virtual const string& name()
+	{
+		return m_name;
+	}
+
+protected:
+	string m_name;
+};
+
+//具体的单个对象实现类，“树枝”类
+class HeadCompany : public Company
+{
+public:
+	HeadCompany(const string& name): Company(name){}
+	virtual ~HeadCompany(){ cout << "~HeadCompany()" << endl;}
+
+	void add(Company* company) override
+	{
+		shared_ptr<Company> temp(company);
+		m_companyList.push_back(temp);
+	}
+
+	void remove(const string& strName) override
+	{
+		list<shared_ptr<Company>>::iterator iter = m_companyList.begin();
+		for(; iter != m_companyList.end(); iter++)
+		{
+			if((*iter).get()->name() == strName)
+			{
+			//不应该在此处使用list<T>.erase(list<T>::iterator iter),会导致iter++错误，这里删除目               标元素之后，必须return。
+				m_companyList.erase(iter);
+				return;
+			}
+		}
+	}
+
+	void display(int depth) override
+	{
+		for(int i = 0; i < depth; i++)
+		{
+			cout << "-";
+		}
+		cout << this->name().data() << endl;
+		list<shared_ptr<Company>>::iterator iter = m_companyList.begin();
+		for(; iter!= m_companyList.end(); iter++)
+		{
+			(*iter).get()->display(depth + 1);
+		}
+	}
+
+private:
+	list<shared_ptr<Company>> m_companyList;
+};
+
+//具体的单个对象实现类，“树叶”类
+class ResearchCompany : public Company
+{
+public:
+	ResearchCompany(const string& name): Company(name){}
+	virtual ~ResearchCompany(){ cout << "~ResearchCompany()" << endl;}
+
+	void add(Company* ) override
+	{
+	}
+
+	void remove(const string&) override
+	{
+	}
+
+	void display(int depth) override
+	{
+		for(int i = 0; i < depth; i++)
+		{
+			cout << "-";
+		}
+		cout << m_name.data() << endl;
+	}
+};
+
+//具体的单个对象实现类，“树叶”类
+class SalesCompany : public Company
+{
+public:
+	SalesCompany(const string& name): Company(name){}
+	virtual ~SalesCompany(){ cout << "~SalesCompany()" << endl;}
+
+	void add(Company* ) override
+	{
+	}
+
+	void remove(const string&) override
+	{
+	}
+
+	void display(int depth) override
+	{
+		for(int i = 0; i < depth; i++)
+		{
+			cout << "-";
+		}
+		cout << m_name.data() << endl;
+	}
+};
+
+//具体的单个对象实现类，“树叶”类
+class FinanceCompany : public Company
+{
+public:
+	FinanceCompany(const string& name): Company(name){}
+	virtual ~FinanceCompany(){ cout << "~FinanceCompany()" << endl;}
+
+	void add(Company* ) override
+	{
+	}
+
+	void remove(const string&) override
+	{
+	}
+
+	void display(int depth) override
+	{
+		for(int i = 0; i < depth; i++)
+		{
+			cout << "-";
+		}
+		cout << m_name.data() << endl;
+	}
+};
+
+
+int main()
+{
+	HeadCompany* headRoot = new HeadCompany("Head Root Company");
+
+	HeadCompany* childRoot1 = new HeadCompany("Child Company A");
+	ResearchCompany* r1 = new ResearchCompany("Research Company A");
+	SalesCompany* s1 = new SalesCompany("Sales Company A");
+	SalesCompany* s2 = new SalesCompany("Sales Company B");
+	FinanceCompany* f1 = new FinanceCompany("FinanceCompany A");
+	
+	childRoot1->add(r1);
+	childRoot1->add(s1);
+	childRoot1->add(s2);
+	childRoot1->add(f1);
+
+	HeadCompany* childRoot2 = new HeadCompany("Child Company B");
+	ResearchCompany* r2 = new ResearchCompany("Research Company B");
+	SalesCompany* s3 = new SalesCompany("Sales Company C");
+	SalesCompany* s4 = new SalesCompany("Sales Company D");
+	FinanceCompany* f2 = new FinanceCompany("FinanceCompany B");
+	
+	childRoot2->add(r2);
+	childRoot2->add(s3);
+	childRoot2->add(s4);
+	childRoot2->add(f2);
+
+	headRoot->add(childRoot1);
+	headRoot->add(childRoot2);
+	headRoot->display(1);
+	
+	cout << "\n***************\n" << endl;
+
+	childRoot1->remove("Sales Company B");
+	headRoot->display(1);
+	
+	cout << "\n***************\n" << endl;
+
+	delete headRoot;
+	headRoot = nullptr;
+
+	return 0;
+}
+```
+
+## 10、代理模式
+
+代理模式：为其它对象提供一种代理以控制这个对象的访问。在某些情况下，一个对象不适合或者不能直接引用另一个对象，而代理对象可以在客户端和目标对象之间起到中介作用。
+
+优点：
+
+* 职责清晰。真实的角色只负责实现实际的业务逻辑，不用关心其它非本职责的事务，通过后期的代理完成具体的任务。这样代码会简洁清晰。
+* 代理对象可以在客户端和目标对象之间起到中介的作用，这样就保护了目标对象。
+* 扩展性好。
+
+```C++
+/*
+* 关键代码：一个是真正的你要访问的对象(目标类)，一个是代理对象,真正对象与代理对象实现同一个接口,先访问代理*         类再访问真正要访问的对象。
+*/
+#include <iostream>
+
+using namespace std;
+
+class Gril
+{
+public:
+    Gril(const string& name = "gril"):m_string(name){}
+    string getName()
+    {
+        return m_string;
+    }
+private:
+    string m_string;
+};
+
+class Profession
+{
+public:
+    virtual ~Profession(){}
+    virtual void profess() = 0;
+};
+
+class YoungMan : public Profession
+{
+public:
+    YoungMan(const Gril& gril):m_gril(gril){}
+    void profess()
+    {
+        cout << "Young man love " << m_gril.getName().data() << endl;
+    }
+
+private:
+    Gril m_gril;
+};
+
+class ManProxy : public Profession
+{
+public:
+    ManProxy(const Gril& gril):m_pMan(new YoungMan(gril)){}
+	~ManProxy()
+	{
+		delete m_pMan;
+		m_pMan = nullptr;
+	}
+    void profess()
+    {
+        m_pMan->profess();
+    }
+private:
+    YoungMan* m_pMan;
+};
+
+int main(int argc, char *argv[])
+{
+    Gril gril("heihei");
+    ManProxy* proxy = new ManProxy(gril);
+    proxy->profess();
+
+    delete proxy;
+	proxy = nullptr;
+    return 0;
+}
+```
+
+## 11、享元模式
+
+享元模式：运用共享技术有效地支持大量细粒度的对象。在有大量对象时，把其中共同的部分抽象出来，如果有相同的业务请求，直接返回内存中已有的对象，避免重新创建。
+
+
+
+以下情况可以考虑使用享元模式：
+
+* 系统中有大量的对象，这些对象消耗大量的内存，且这些对象的状态可以被外部化。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
