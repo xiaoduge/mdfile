@@ -1567,31 +1567,867 @@ int main(int argc, char *argv[])
 
 享元模式：运用共享技术有效地支持大量细粒度的对象。在有大量对象时，把其中共同的部分抽象出来，如果有相同的业务请求，直接返回内存中已有的对象，避免重新创建。
 
-
-
 以下情况可以考虑使用享元模式：
 
 * 系统中有大量的对象，这些对象消耗大量的内存，且这些对象的状态可以被外部化。
 
+对于享元模式，需要将对象的信息分为两个部分：内部状态和外部状态。内部状态是指被共享出来的信息，储存在享元对象内部且不随环境变化而改变；外部状态是不可以共享的，它随环境改变而改变，是由客户端控制的。
+
+```C++
+/*
+* 关键代码：将内部状态作为标识，进行共享。
+*/
+#include <iostream>
+#include <map>
+#include <memory>
+
+using namespace std;
+
+//抽象享元类，提供享元类外部接口。
+class AbstractConsumer
+{
+public:
+    virtual ~AbstractConsumer(){}
+    virtual void setArticle(const string&) = 0;
+    virtual const string& article() = 0;
+};
+
+//具体的享元类
+class Consumer : public AbstractConsumer
+{
+public:
+    Consumer(const string& strName) : m_user(strName){}
+    ~Consumer()
+    {
+        cout << " ~Consumer()" << endl;
+    }
+
+    void setArticle(const string& info) override
+    {
+        m_article = info;
+    }
+
+    const string& article() override
+    {
+        return m_article;
+    }
+
+private:
+    string m_user;
+    string m_article;
+};
+
+//享元工厂类
+class Trusteeship
+{
+public:
+    ~Trusteeship()
+    {
+         m_consumerMap.clear();
+    }
+
+    void hosting(const string& user, const string& article)
+    {
+        if(m_consumerMap.count(user))
+        {
+            cout << "A customer named " << user.data() << " already exists" << endl;
+            Consumer* consumer = m_consumerMap.at(user).get();
+            consumer->setArticle(article);
+        }
+        else
+        {
+            shared_ptr<Consumer> consumer(new Consumer(user));
+            consumer.get()->setArticle(article);
+            m_consumerMap.insert(pair<string, shared_ptr<Consumer>>(user, consumer));
+        }
+    }
+
+    void display()
+    {
+        map<string, shared_ptr<Consumer>>::iterator iter = m_consumerMap.begin();
+        for(; iter != m_consumerMap.end(); iter++)
+        {
+            cout << iter->first.data() << " : "<< iter->second.get()->article().data() << endl;
+        }
+    }
+
+private:
+    map<string, shared_ptr<Consumer>> m_consumerMap;
+};
 
 
+int main()
+{
+    Trusteeship* ts = new Trusteeship;
+    ts->hosting("zhangsan", "computer");
+    ts->hosting("lisi", "phone");
+    ts->hosting("wangwu", "watch");
+
+    ts->display();
+
+    ts->hosting("zhangsan", "TT");
+    ts->hosting("lisi", "TT");
+    ts->hosting("wangwu", "TT");
+
+    ts->display();
+
+    delete ts;
+    ts = nullptr;
+
+    return 0;
+}
+```
+
+## 12、桥接模式
+
+桥接模式：将抽象部分与实现部分分离，使它们都可以独立变换。
+
+以下情形考虑使用桥接模式：
+
+* 当一个对象有多个变化因素的时候，考虑依赖于抽象的实现，而不是具体的实现。
+* 当多个变化因素在多个对象间共享时，考虑将这部分变化的部分抽象出来再聚合/合成进来。
+* 当一个对象的多个变化因素可以动态变化的时候。
+
+优点：
+
+* 将实现抽离出来，再实现抽象，使得对象的具体实现依赖于抽象，满足了依赖倒转原则。
+* 更好的可扩展性。
+* 可动态的切换实现。桥接模式实现了抽象和实现的分离，在实现桥接模式时，就可以实现动态的选择具体的实现。
+
+```c++
+/*
+* 关键代码：将现实独立出来，抽象类依赖现实类。
+* 以下示例中，将各类App、各类手机独立开来，实现各种App和各种手机的自由桥接。
+*/
+#include <iostream>
+
+using namespace std;
+
+//抽象App类，提供接口
+class App
+{
+public:
+    virtual ~App(){ cout << "~App()" << endl; }
+    virtual void run() = 0;
+};
+
+//具体的App实现类
+class GameApp:public App
+{
+public:
+    void run()
+    {
+        cout << "GameApp Running" << endl;
+    }
+};
+
+//具体的App实现类
+class TranslateApp:public App
+{
+public:
+    void run()
+    {
+        cout << "TranslateApp Running" << endl;
+    }
+};
+
+//抽象手机类，提供接口
+class MobilePhone
+{
+public:
+    virtual ~MobilePhone(){ cout << "~MobilePhone()" << endl;}
+    virtual void appRun(App* app) = 0;  //实现App与手机的桥接
+};
+
+//具体的手机实现类
+class XiaoMi:public MobilePhone
+{
+public:
+    void appRun(App* app)
+    {
+        cout << "XiaoMi: ";
+        app->run();
+    }
+};
+
+//具体的手机实现类
+class HuaWei:public MobilePhone
+{
+public:
+    void appRun(App* app)
+    {
+        cout << "HuaWei: ";
+        app->run();
+    }
+};
+
+int main()
+{
+    App* gameApp = new GameApp;
+    App* translateApp = new TranslateApp;
+    MobilePhone* mi = new XiaoMi;
+    MobilePhone* hua = new HuaWei;
+    mi->appRun(gameApp);
+    mi->appRun(translateApp);
+    hua->appRun(gameApp);
+    hua->appRun(translateApp);
+
+    delete hua;
+	hua = nullptr;
+    delete mi;
+	mi = nullptr;
+    delete gameApp;
+	gameApp = nullptr;
+    delete translateApp;
+	translateApp = nullptr;
+
+    return 0;
+}
+
+```
+
+## 13、装饰模式
+
+装饰模式：动态地给一个对象添加一些额外的功能，它是通过创建一个包装对象，也就是装饰来包裹真实的对象。新增加功能来说，装饰器模式比生产子类更加灵活。
+
+以下情形考虑使用装饰模式：
+
+* 需要扩展一个类的功能，或给一个类添加附加职责。
+
+* 需要动态的给一个对象添加功能，这些功能可以再动态的撤销。
+
+* 需要增加由一些基本功能的排列组合而产生的非常大量的功能，从而使继承关系变的不现实。
+
+* 当不能采用生成子类的方法进行扩充时。一种情况是，可能有大量独立的扩展，为支持每一种组合将产生大量的子类，使得子类数目呈爆炸性增长。另一种情况可能是因为类定义被隐藏，或类定义不能用于生成子类。
+
+```C++
+/*
+* 关键代码：1、Component 类充当抽象角色，不应该具体实现。 2、修饰类引用和继承 Component 类，具体扩展类重写父类方法。
+*/
+#include <iostream>
+
+using namespace std;
+
+//抽象构件（Component）角色：给出一个抽象接口，以规范准备接收附加责任的对象。
+class Component
+{
+public:
+    virtual ~Component(){}
+
+    virtual void configuration() = 0;
+};
+
+//具体构件（Concrete Component）角色：定义一个将要接收附加责任的类。
+class Car : public Component
+{
+public:
+    void configuration() override
+    {
+        cout << "A Car" << endl;
+    }
+};
+
+//装饰（Decorator）角色：持有一个构件（Component）对象的实例，并实现一个与抽象构件接口一致的接口。
+class DecorateCar : public Component
+{
+public:
+    DecorateCar(Component* car) : m_pCar(car){}
+
+    void configuration() override
+    {
+        m_pCar->configuration();
+    }
+
+private:
+    Component* m_pCar;
+};
+
+//具体装饰（Concrete Decorator）角色：负责给构件对象添加上附加的责任。
+class DecorateLED : public DecorateCar
+{
+public:
+    DecorateLED(Component* car) : DecorateCar(car){}
+
+    void configuration() override
+    {
+        DecorateCar::configuration();
+        addLED();
+    }
+
+private:
+    void addLED()
+    {
+        cout << "Install LED" << endl;
+    }
+
+};
+
+//具体装饰（Concrete Decorator）角色：负责给构件对象添加上附加的责任。
+class DecoratePC : public DecorateCar
+{
+public:
+    DecoratePC(Component* car) : DecorateCar(car){}
+
+    void configuration() override
+    {
+        DecorateCar::configuration();
+        addPC();
+    }
+
+private:
+    void addPC()
+    {
+        cout << "Install PC" << endl;
+    }
+};
+
+//具体装饰（Concrete Decorator）角色：负责给构件对象添加上附加的责任。
+class DecorateEPB : public DecorateCar
+{
+public:
+    DecorateEPB(Component* car) : DecorateCar(car){}
+
+    void configuration() override
+    {
+        DecorateCar::configuration();
+        addEPB();
+    }
+
+private:
+    void addEPB()
+    {
+        cout << "Install Electrical Park Brake" << endl;
+    }
+};
+
+int main()
+{
+    Car* car = new Car;
+    DecorateLED* ledCar = new DecorateLED(car);
+    DecoratePC* pcCar = new DecoratePC(ledCar);
+    DecorateEPB* epbCar = new DecorateEPB(pcCar);
+
+    epbCar->configuration();
+
+    delete epbCar;
+    epbCar = nullptr;
+
+    delete pcCar;
+    pcCar = nullptr;
+
+    delete ledCar;
+    ledCar = nullptr;
+
+    delete car;
+    car = nullptr;
+
+    return 0;
+}
+```
+
+## 14、备忘录模式
+
+备忘录模式：在不破坏封装性的前提下，捕获一个对象的内部状态，并在该对象之外保存这个状态。这样以后就可以将该对象恢复到原来保存的状态。
+
+备忘录模式中需要定义的角色类：
+
+1. Originator(发起人)：负责创建一个备忘录Memento，用以记录当前时刻自身的内部状态，并可使用备忘录恢复内部状态。Originator可以根据需要决定Memento存储自己的哪些内部状态。
+
+2. Memento(备忘录)：负责存储Originator对象的内部状态，并可以防止Originator以外的其他对象访问备忘录。备忘录有两个接口：Caretaker只能看到备忘录的窄接口，他只能将备忘录传递给其他对象。Originator却可看到备忘录的宽接口，允许它访问返回到先前状态所需要的所有数据。
+
+3. Caretaker(管理者):负责备忘录Memento，不能对Memento的内容进行访问或者操作。
+
+```c++
+/*
+* 关键代码：Memento类、Originator类、Caretaker类；Originator类不与Memento类耦合，而是与Caretaker类耦合。
+*/
+
+include <iostream>
+
+using namespace std;
+
+//需要保存的信息
+typedef struct  
+{
+    int grade;
+    string arm;
+    string corps;
+}GameValue;
+
+//Memento类
+class Memento   
+{
+public:
+    Memento(){}
+    Memento(GameValue value):m_gameValue(value){}
+    GameValue getValue()
+    {
+        return m_gameValue;
+    }
+private:
+    GameValue m_gameValue;
+};
+
+//Originator类
+class Game   
+{
+public:
+    Game(GameValue value):m_gameValue(value)
+    {}
+    void addGrade()  //等级增加
+    {
+        m_gameValue.grade++;
+    }
+    void replaceArm(string arm)  //更换武器
+    {
+        m_gameValue.arm = arm;
+    }
+    void replaceCorps(string corps)  //更换工会
+    {
+        m_gameValue.corps = corps;
+    }
+    Memento saveValue()    //保存当前信息
+    {
+        Memento memento(m_gameValue);
+        return memento;
+    }
+    void load(Memento memento) //载入信息
+    {
+        m_gameValue = memento.getValue();
+    }
+    void showValue()
+    {
+        cout << "Grade: " << m_gameValue.grade << endl;
+        cout << "Arm  : " << m_gameValue.arm.data() << endl;
+        cout << "Corps: " << m_gameValue.corps.data() << endl;
+    }
+private:
+    GameValue m_gameValue;
+};
+
+//Caretaker类
+class Caretake 
+{
+public:
+    void save(Memento memento)  //保存信息
+    {
+        m_memento = memento;
+    }
+    Memento load()            //读已保存的信息
+    {
+        return m_memento;
+    }
+private:
+    Memento m_memento;
+};
+
+int main()
+{
+    GameValue v1 = {0, "Ak", "3K"};
+    Game game(v1);    //初始值
+    game.addGrade();
+    game.showValue();
+    cout << "----------" << endl;
+    Caretake care;
+    care.save(game.saveValue());  //保存当前值
+    game.addGrade();          //修改当前值
+    game.replaceArm("M16");
+    game.replaceCorps("123");
+    game.showValue();
+    cout << "----------" << endl;
+    game.load(care.load());   //恢复初始值
+    game.showValue();
+    return 0;
+}
+```
+
+## 15、中介者模式
+
+中介者模式：用一个中介对象来封装一系列的对象交互，中介者使各对象不需要显示地相互引用，从而使其耦合松散，而且可以独立地改变它们之前的交互。  
+
+如果对象与对象之前存在大量的关联关系，若一个对象改变，常常需要跟踪与之关联的对象，并做出相应的处理，这样势必会造成系统变得复杂，遇到这种情形可以考虑使用中介者模式。当多个对象存在关联关系时，为它们设计一个中介对象，当一个对象改变时，只需要通知它的中介对象，再由它的中介对象通知每个与它相关的对象。
+
+```c++
+/*
+* 关键代码：将相关对象的通信封装到一个类中单独处理。
+*/
+#include <iostream>
+
+using namespace std;
+
+class Mediator;
+
+//抽象同事类。
+class Businessman
+{
+public:
+    Businessman(){}
+    Businessman(Mediator* mediator) : m_pMediator(mediator){}
+
+    virtual ~Businessman(){}
+
+    virtual void setMediator(Mediator* m)
+    {
+        m_pMediator = m;
+    }
+
+    virtual void sendMessage(const string& msg) = 0;
+    virtual void getMessage(const string& msg) = 0;
+
+protected:
+    Mediator* m_pMediator;
+};
+
+//抽象中介者类。
+class  Mediator
+{
+public:
+    virtual ~Mediator(){}
+    virtual void setBuyer(Businessman* buyer) = 0;
+    virtual void setSeller(Businessman* seller) = 0;
+    virtual void send(const string& msg, Businessman* man) = 0;
+};
+
+//具体同事类
+class Buyer : public Businessman
+{
+public:
+    Buyer() : Businessman(){}
+    Buyer(Mediator* mediator) : Businessman(mediator){}
+
+    void sendMessage(const string& msg) override
+    {
+        m_pMediator->send(msg, this);
+    }
+
+    void getMessage(const string& msg)
+    {
+        cout << "Buyer recv: " << msg.data() << endl;
+    }
+};
+
+//具体同事类
+class Seller : public Businessman
+{
+public:
+    Seller() : Businessman(){}
+    Seller(Mediator* mediator) : Businessman(mediator){}
+
+    void sendMessage(const string& msg) override
+    {
+        m_pMediator->send(msg, this);
+    }
+
+    void getMessage(const string& msg)
+    {
+        cout << "Seller recv: " << msg.data() << endl;
+    }
+};
+
+//具体中介者类
+class HouseMediator : public Mediator
+{
+public:
+    void setBuyer(Businessman* buyer) override
+    {
+        m_pBuyer = buyer;
+    }
+
+    void setSeller(Businessman* seller) override
+    {
+        m_pSeller = seller;
+    }
+
+    void send(const string& msg, Businessman* man) override
+    {
+        if(man == m_pBuyer)
+        {
+            m_pSeller->getMessage(msg);
+        }
+        else if(man == m_pSeller)
+        {
+            m_pBuyer->getMessage(msg);
+        }
+    }
+
+private:
+    Businessman* m_pBuyer;
+    Businessman* m_pSeller;
+};
+
+int main()
+{
+    HouseMediator* hMediator = new HouseMediator;
+    Buyer* buyer = new Buyer(hMediator);
+    Seller* seller = new Seller(hMediator);
+
+    hMediator->setBuyer(buyer);
+    hMediator->setSeller(seller);
+
+    buyer->sendMessage("Sell not to sell?");
+    seller->sendMessage("Of course selling!");
+
+    delete buyer;
+    buyer = nullptr;
+
+    delete seller;
+    seller = nullptr;
+
+    delete hMediator;
+    hMediator = nullptr;
 
 
+    return 0;
+}
+```
 
+## 16、职责链模式
 
+职责链模式：使多个对象都有机会处理请求，从而避免请求的发送者和接收者之前的耦合关系，将这些对象连成一条链，并沿着这条链传递请求，直到有一个对象处理它为止。
 
+职责链上的处理者负责处理请求，客户只需要将请求发送到职责链上即可，无需关心请求的处理细节和请求的传递，所有职责链将请求的发送者和请求的处理者解耦了。
 
+```c++
+/*
+* 关键代码：Handler内指明其上级，handleRequest()里判断是否合适，不合适则传递给上级。
+*/
+#include <iostream>
 
+using namespace std;
 
+enum RequestLevel
+{
+    Level_One = 0,
+    Level_Two,
+    Level_Three,
+	Level_Num
+};
 
+//抽象处理者（Handler）角色，提供职责链的统一接口。
+class Leader
+{
+public:
+    Leader(Leader* leader):m_leader(leader){}
+    virtual ~Leader(){}
+    virtual void handleRequest(RequestLevel level) = 0;
+protected:
+    Leader* m_leader;
+};
 
+//具体处理者（Concrete Handler）角色
+class Monitor:public Leader   //链扣1
+{
+public:
+    Monitor(Leader* leader):Leader(leader){}
+    void handleRequest(RequestLevel level)
+    {
+        if(level < Level_Two)
+        {
+            cout << "Mointor handle request : " << level << endl;
+        }
+        else
+        {
+            m_leader->handleRequest(level);
+        }
+    }
+};
 
+//具体处理者（Concrete Handler）角色
+class Captain:public Leader    //链扣2
+{
+public:
+    Captain(Leader* leader):Leader(leader){}
+    void handleRequest(RequestLevel level)
+    {
+        if(level < Level_Three)
+        {
+            cout << "Captain handle request : " << level << endl;
+        }
+        else
+        {
+            m_leader->handleRequest(level);
+        }
+    }
+};
 
+//具体处理者（Concrete Handler）角色
+class General:public Leader   //链扣3
+{
+public:
+    General(Leader* leader):Leader(leader){}
+    void handleRequest(RequestLevel level)
+    {
+        cout << "General handle request : " << level << endl;
+    }
+};
 
+int main()
+{
+    Leader* general = new General(nullptr);
+    Leader* captain = new Captain(general);
+    Leader* monitor = new Monitor(captain);
+    monitor->handleRequest(Level_One);
 
+	delete monitor;
+	monitor = nullptr;
+	delete captain;
+	captain = nullptr;
+	delete general;
+	general = nullptr;
+    return 0;
+}
+```
 
+## 17、观察者模式
 
+观察者模式：定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都要得到通知并自动更新。
 
+观察者模式从根本上讲必须包含两个角色：观察者和被观察对象。
+
+* 被观察对象自身应该包含一个容器来存放观察者对象，当被观察者自身发生改变时通知容器内所有的观察者对象自动更新。
+* 观察者对象可以注册到被观察者的中，完成注册后可以检测被观察者的变化，接收被观察者的通知。当然观察者也可以被注销掉，停止对被观察者的监控。
+
+```c++
+/*
+* 关键代码：在目标类中增加一个ArrayList来存放观察者们。
+*/
+#include <iostream>
+#include <list>
+#include <memory>
+
+using namespace std;
+
+class View;
+
+//被观察者抽象类   数据模型
+class DataModel
+{
+public:
+    virtual ~DataModel(){}
+    virtual void addView(View* view) = 0;
+    virtual void removeView(View* view) = 0;
+    virtual void notify() = 0;   //通知函数
+};
+
+//观察者抽象类   视图
+class View
+{
+public:
+    virtual ~View(){ cout << "~View()" << endl; }
+    virtual void update() = 0;
+    virtual void setViewName(const string& name) = 0;
+    virtual const string& name() = 0;
+};
+
+//具体的被观察类， 整数模型
+class IntDataModel:public DataModel
+{
+public:
+    ~IntDataModel()
+    {
+        m_pViewList.clear();
+    }
+
+    virtual void addView(View* view) override
+    {
+        shared_ptr<View> temp(view);
+        auto iter = find(m_pViewList.begin(), m_pViewList.end(), temp);
+        if(iter == m_pViewList.end())
+        {
+            m_pViewList.push_front(temp);
+        }
+        else
+        {
+            cout << "View already exists" << endl;
+        }
+    }
+
+    void removeView(View* view) override
+    {
+        auto iter = m_pViewList.begin();
+        for(; iter != m_pViewList.end(); iter++)
+        {
+            if((*iter).get() == view)
+            {
+                m_pViewList.erase(iter);
+                cout << "remove view" << endl;
+                return;
+            }
+        }
+    }
+
+    virtual void notify() override
+    {
+        auto iter = m_pViewList.begin();
+        for(; iter != m_pViewList.end(); iter++)
+        {
+            (*iter).get()->update();
+        }
+    }
+
+private:
+    list<shared_ptr<View>> m_pViewList; 
+};
+
+//具体的观察者类    表视图
+class TableView : public View
+{
+public:
+    TableView() : m_name("unknow"){}
+    TableView(const string& name) : m_name(name){}
+    ~TableView(){ cout << "~TableView(): " << m_name.data() << endl; }
+
+    void setViewName(const string& name)
+    {
+        m_name = name;
+    }
+
+    const string& name()
+    {
+        return m_name;
+    }
+
+    void update() override
+    {
+        cout << m_name.data() << " update" << endl;
+    }
+
+private:
+    string m_name;
+};
+
+int main()
+{
+    /*
+    * 这里需要补充说明的是在此示例代码中，View一旦被注册到DataModel类之后，DataModel解析时会自动解析掉     * 内部容器中存储的View对象，因此注册后的View对象不需要在手动去delete，再去delete View对象会出错。
+    */
+    
+    View* v1 = new TableView("TableView1");
+    View* v2 = new TableView("TableView2");
+    View* v3 = new TableView("TableView3");
+    View* v4 = new TableView("TableView4");
+
+    IntDataModel* model = new IntDataModel;
+    model->addView(v1);
+    model->addView(v2);
+    model->addView(v3);
+    model->addView(v4);
+
+    model->notify();
+
+    cout << "-------------\n" << endl;
+
+    model->removeView(v1);
+
+    model->notify();
+
+    delete model;
+    model = nullptr;
+
+    return 0;
+}
+
+```
 
 
 
