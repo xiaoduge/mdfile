@@ -142,6 +142,16 @@ select column_name1, column_name2, ...column_nameN from tableName
 select * from Device_Type where Device_typenum = '0001' limit 5 offset 1;
 ```
 
+只返回唯一的不同值。
+
+```mysql
+select distinct column_name1, column_name2, ...column_nameN from tableName 
+[where condition]
+[limit N][offset M]
+```
+
+
+
 ### 9、where子句
 
 ```mysql
@@ -473,3 +483,117 @@ alter table oldTablName rename to newTableName
 alter table Types_Num rename to Types_Serial;
 ```
 
+### 20、索引
+
+#### 1、普通索引
+
+##### 创建索引
+
+```mysql
+create index indexName on tableName(fieldName(length));
+```
+
+indexName:索引名
+
+tableName:表名
+
+fieldName:列名
+
+如果是CHAR，VARCHAR类型，length可以小于字段实际长度；如果是BLOB和TEXT类型，必须指定 length。
+
+##### 修改表结构添加索引
+
+```mysql
+alter table tableName add index indexName(fieldName);
+```
+
+##### 创建表时创建索引
+
+```mysql
+create table tableName(
+    ID int not null,
+    fieldName varchar(24) not null,
+    index[indexName](fieldName(length))
+);
+```
+
+##### 删除索引
+
+```mysql
+drop index [indexName] on tableName
+```
+
+#### 2、唯一索引
+
+##### 创建索引
+
+```mysql
+create unique index indexName on tableName(fieldName(length));
+```
+
+
+
+##### 修改表结构添加索引
+
+```mysql
+alter table tableName add unique index indexName(fieldName);
+```
+
+
+
+##### 创建表时创建索引
+
+```mysql
+create table tableName(
+    ID int not null,
+    fieldName varchar(24) not null,
+    unique[indexName](fieldName(length))
+);
+```
+
+### 3、显示索引信息
+
+```mysql
+show index from tableName;
+```
+
+### 21、临时表
+
+MySQL临时表在只在当前连接下有效，连接断开后临时表会自动删除。当使用脚本语言或客户端连接MySQL创建临时表时，脚本运行结束或客户端关闭，则临时表删除。
+
+```mysql
+create temporary table tableName(
+);
+```
+
+使用
+
+```mysql
+show tables;
+```
+
+不会显示临时表信息。
+
+### 22、复制表
+
+#### 1、方法1
+
+```mysql
+create table newTableName();
+```
+
+```mysql
+insert into newTableName (field1, field2, ...fiedlN)
+select field1, field2, ...fiedlN from oldTableName
+```
+
+
+
+#### 2、方法2
+
+```mysql
+create table newTableName like oldTableName; #只复制表结构
+insert into newTableName select * from oldTableName; #复制表中的数据
+```
+
+#### 
