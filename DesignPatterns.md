@@ -766,7 +766,10 @@ Singleton* Singleton::getInstance()
 	if(m_pSingleton == NULL)
 	{
 		mt.lock();
-		m_pSingleton = new Singleton();
+        if(m_pSingleton == NULL)
+        {
+			m_pSingleton = new Singleton();
+        }
 		mt.unlock();
 	}
 	return m_pSingleton;
