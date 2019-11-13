@@ -2432,9 +2432,147 @@ int main()
 
 ```
 
+## 18、访客模式
 
+访客模式：通俗的说, 就是定义一个访问者角色, 当对指定角色进行访问时要通过访问者进行访问。
 
+访客模式的侵入性适中，仅在被访问的类里面加一个对外提供接待访问者的接口。
 
+访客模式的优点:
+
+1. 符合单一职责原则. 具体元素角色负责数据的加载, 而访问者角色负责报表的展现, 两个不同的职责非常明确的分离开来, 各自演绎变化.
+2. 优秀的扩展. 由于职责分开,继续增加 对数据的操作是非常快捷的.
+
+访客模式应用场景：
+
+1. 对象结构中对象对应的类很少改变，但经常需要在此对象结构上定义新的操作。 
+2. 需要对一个对象结构中的对象进行很多不同的并且不相关的操作，而需要避免让这些操作"污染"这些对象的类，也不希望在增加新操作时修改这些类。
+
+```c++
+class Visitor;
+
+//被访问类基类：  网站
+class Website
+{
+public:
+    virtual ~Website(){ std::cout << "~Website()" << std::endl;}
+    virtual void accept(Visitor&) = 0;
+};
+
+//被访问类具体实现类：  淘宝网
+class TaoBao : public Website
+{
+public:
+    void accept(Visitor &v) override;
+
+    void shopping();
+};
+
+//被访问类具体实现类： 优酷
+class YouKu : public Website
+{
+public:
+    void accept(Visitor &v) override;
+
+    void playVideo();
+};
+
+//访客类基类
+class Visitor
+{
+public:
+    Visitor() = default;
+    Visitor(const std::string &name) : m_name(name){}
+
+    virtual ~Visitor(){ std::cout << "~Visitor()" << std::endl;}
+    virtual void visit(TaoBao &web) = 0;
+    virtual void visit(YouKu &web) = 0;
+
+protected:
+    std::string m_name{"unknow"};
+};
+
+//访客具体实现类：  普通游客用户
+class GeneralVisitor : public Visitor
+{
+public:
+    void visit(TaoBao &web) override;
+    void visit(YouKu &web) override;
+};
+
+//访客具体实现类：  VIP用户
+class VIPVisitor : public Visitor
+{
+public:
+    VIPVisitor(const std::string &name) : Visitor(name){}
+
+    void visit(TaoBao &web) override;
+    void visit(YouKu &web) override;
+
+};
+
+//
+void YouKu::accept(Visitor &v)
+{
+    v.visit(*this);
+}
+
+void YouKu::playVideo()
+{
+    std::cout << "Watch the video" << std::endl;
+}
+
+void TaoBao::accept(Visitor &v)
+{
+    v.visit(*this);
+}
+
+void TaoBao::shopping()
+{
+    std::cout << "Online shopping" << std::endl;
+}
+
+void GeneralVisitor::visit(TaoBao &web)
+{
+    web.shopping();
+}
+
+void GeneralVisitor::visit(YouKu &web)
+{
+    web.playVideo();
+}
+
+void VIPVisitor::visit(TaoBao &web)
+{
+    std::cout << m_name << ": ";
+    web.shopping();
+}
+
+void VIPVisitor::visit(YouKu &web)
+{
+    std::cout << m_name << ": ";
+    web.playVideo();
+}
+
+//测试
+int main()
+{
+    TaoBao tb;
+    YouKu yk;
+    GeneralVisitor gVisitor;
+    VIPVisitor vVisitor{"zhangsan"};
+
+    yk.accept(gVisitor);
+    tb.accept(gVisitor);
+
+    yk.accept(vVisitor);
+    tb.accept(vVisitor);
+
+    return 0;
+}
+```
+
+从以上代码来看，当被访问类数量较多时，需要在访客类中对应的编写大量的方法。另外访客类中的方法实现依赖于被访客类的具体类，没有依赖于抽象类。
 
 
 

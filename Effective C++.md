@@ -32,7 +32,7 @@ C++高效编程守则视情况而变化，取决于使用C++的哪一个部分
 
 ### 条款7：为多态基类声明virtual析构函数。
 
-1. polymorphic带有多态性质的base classes 应该声明一个virtual析构函数。如果class带有任何virtual函数，它就应该拥有一个virtual析构函数。但子类以父类指针的形式被析构时，子类对象的成分没有被销毁，故需要将父类的析构函数需要为virtual。
+1. polymorphic带有多态性质的base classes 应该声明一个virtual析构函数。如果class带有任何virtual函数，它就应该拥有一个virtual析构函数。当子类以父类指针的形式被析构时，子类对象的成分没有被销毁，故需要将父类的析构函数需要为virtual。
 2. Classes的设计目的如果不是作为base classes使用，或不是为了具备多态性，就不应该声明virtual析构函数
 3. 若想实现一个抽象的class，但是没有pure virtual函数，可以将class的析构函数声明为pure virtual函数。但是若父类带有pure virtual（纯虚函数）析构函数，子类的析构函数中会有对父类析构函数的调用，因此必须为父类的纯虚函数提供一份定义。
 
@@ -308,7 +308,7 @@ namespact std{
 
 1. 如果使用object references或object pointers可以完成任务，就不要使用objects。
    	如果能够，尽量以class声明式替换class定义式。
-   	为声明式和定义式提供不同的头文件。
+      	为声明式和定义式提供不同的头文件。
 2. 支持“编译依存性最小化”的一般构想是：相依于声明式，不要相依于定义式。基于此构想的两个手段时Handle classes和Interface classes。
 
 ```c++
@@ -636,7 +636,7 @@ void workWithIterator(IterT iter)
 }
 ```
 
-std::iterator_traits<IterT>::value_type   :类型为ItetT对象所指之物的类型
+std::iterator_traits<IterT>::value_type   :类型为IterT对象所指之物的类型
 
 ### 条款43、学习处理模板化基类内的名称。
 

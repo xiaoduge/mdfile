@@ -53,6 +53,8 @@ git pull [远程仓库名][分支名] //后面两个默认为origin master；从
 
 git clone git@github.com:<userName>/<repoName.git>
 
+git remote remove origin   //删除远程连接
+
 ### 8、分支管理
 
 创建与合并分支：
@@ -110,10 +112,9 @@ git push origin <tagName> //推送某个标签到远程
 git push origin --tags   //推送全部尚未推送的本地标签
 
 
- 
 
 
 
 
 
-  
+
