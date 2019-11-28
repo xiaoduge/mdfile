@@ -58,7 +58,7 @@ git remote remove origin   //删除远程连接
 ### 8、分支管理
 
 创建与合并分支：
-git checkout -b <developName>  //创建并切换，相当于一下两天指令
+git checkout -b <developName>  //创建并切换，相当于以下两条指令
 git branch <developName>  //创建
 git checkout <developName>  //切换
 git branch   //查看当前分支 *表示当前分支
