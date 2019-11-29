@@ -1,4 +1,237 @@
-### 1、constexpr
+## 递归
+
+当一个函数调用它自己来定义时称它为递归函数。（什么叫它自己调用它自己呢？）
+
+### 1.1、引出递归
+
+从一个简单的问题考虑递归，求0，1，2， 3，4，5......n的和。
+
+首先定义一个求和公式：sum(n);
+
+显然对于（n > 0）： sum(n) = sum(n - 1) + n ;
+
+​               （n = 0 ） :  sum(0) = 0;
+
+​				成立。
+
+将上述公式翻译成C++函数：
+
+```c++
+unsigned int sum(unsigned int n)
+{
+    if(0 == n)
+    {
+        return 0; //基准情况(递归的出口)，sum不能一直调用它自己吧，总归要有一个出口结束递归吧
+    }
+    else
+    {
+        return sum(n - 1) + n; //sum(unsigned int)调用了它自己
+    }
+}
+
+```
+
+假设 n = 5 分析一下计算过程：
+
+*sum(5) = sum(4) + 5;*
+
+*sum(4) = sum(3) + 4;*
+
+*sum(3) = sum(2) + 3;*
+
+*sum(2) = sum(1) + 2;*
+
+*sum(1) = sum(0) + 1;*  
+
+*sum(0) = 0;*      当sum(0)时，sum()不再调用它自己，作为递归的出口结束递归。
+
+假设没有n = 0, sum(0) = 0 这个基准情况作为递归的出口跳出递归，递归就会一直递归下去，没完没了直至崩溃。*因此递归函数必须有一个基准情况作为递归出口*。
+
+
+
+### 1.2、失败的递归
+
+给出一个所谓的递归函数：
+
+```c++
+int bad(unsigned int n)
+{
+    if(0 == n)
+    {
+        return 0;
+    }
+    else
+    {
+        return bad(n/3 + 1) + n - 1;
+    }
+}
+```
+
+分析一下以上函数，函数给出了 n = 0 的情况作为递归的出口，看似没什么问题。
+
+还是假设n = 5；
+
+bad(5) ： 调用bad(5/3 + 1), 即bad(2);
+
+bad(2)  :   调用bad(2/3 + 1), 即bad(1);
+
+bad(1)  :   调用bad(1/3 + 1), 即bad(1);
+
+bad(1)  :   调用bad(1/3 + 1), 即bad(1)..........
+
+bad(1)一直调用bad(1), 一直调用到程序崩溃。很明显bad()函数定义虽然给出了 n = 0 作为递归出口，但是bad()函数根本不会推进到n = 0 的这种情况。*因此递归调用必须总能够朝着产生基准情况（递归出口）的方向推进*。
+
+
+
+### 1.3、递归和归纳
+
+考虑一个问题：现在需要将一个正整数 n 打印出来，但是I/O给出的函数接口(printDigit)只能处理单个数字（即n < 10）。
+
+我们随便假设一个n值：n = 2019，那么单个数字打印的顺序就是2， 0， 1， 9。换句话说，9是最后一个打印的，在打印9之前要先打印201，即先打印“201”，再打印“9”；依次类推对于“201”先打印“20”，再打印“1”；对于“20”先打印“2”，再打印“0”；对于2已经是单个数字，可以直接打印了, 不需要再划分，再递归了，也就是说单个数字n < 10即为递归的出口。
+
+我们按上述思路细致的分析一下：
+
+对2019分成2部分: 201 = 2019 / 10;  9  = 2019 % 10; 
+
+对201分成2部分：20 = 201 / 10; 1 = 201 % 10;
+
+对20分成2部分：2 = 20 / 10; 0 = 20 % 10;
+
+对于 2 满足 n < 10 的条件，不再递归，直接打印。
+
+现在递归已经很明显了，尝试编写一下代码：
+
+```c++
+//假设printDigit((unsigned int n)如下，
+void printDigit(unsigned int n)
+{
+    std::cout << n;
+}
+
+void print(unsigned int n)
+{
+    if(n >= 10)
+    {
+        print(n / 10);
+    }
+    printDigit(n % 10);
+}
+```
+
+代码编写好了，现在需要证明以下代码是否正确：对于n >= 0，数的递归打印算法总是正确的。
+
+**证明：**用k表示数字n的包含单个数字的个数。当k = 1，即 n < 10 时，很明显程序是正确的，因为它不需要递归，print()只调用一次printDigit(), 不调用它自己。然后假设print()对于所有k位数都能正常工作，任何k + 1位的数字n都可以通过它的前k位的数字和最低1位数字来表示。前k 位的数字恰好是[ n / 10],  归纳假设它能正常工作，而最低1位数字是[ n % 10]，因此该程序能够正确的打印出任意k + 1位。于是根据归纳法[^归纳法]，所有数字都能被正确打印出来。
+
+由以上实例总结可以出一条递归的设计法则：假设所有递归调用都能运行。
+
+[^归纳法]: 1、证明当*n*= 1时命题成立。2、假设*n*=*m*时命题成立，那么可以**推导**出在*n*=*m*+1时命题也成立。（*m*代表任意自然数）。3、归纳结论。
+
+### 1.4、递归的合成效益法则
+
+用递归实现一个斐波那契数列：
+
+```c++
+//斐波纳契数列:1、1、2、3、5、8、13、21、34
+int f(int n)
+{
+    if(n < 1)
+    {
+        return 0;
+    }
+    else if(n <= 2)
+    {
+        return 1;
+    }
+
+    return f(n-1) + f(n-2);
+
+}
+```
+
+假设n = 8, 函数调用f(8), 递归调用如下图：
+
+```mermaid
+graph TB
+	8-->7;
+	7-->6;
+	6-->5;
+	5-->4;
+	4-->3;
+	3-->2;
+	8-->id0(6);
+	id0(6)-->id1(5);
+	id1(5)-->id2(4);
+	id2(4)-->id3(3);
+	id3(3)-->id4(2);
+	7-->id5(5);
+	id5(5)-->id6(4);
+	id6(4)-->id7(3);
+	id7(3)-->id8(2);
+	6-->id9(4);
+	id9(4)-->id10(3);
+	id10(3)-->id11(2);
+	5-->id12(3);
+	id12(3)-->id13(2);
+	4-->id14(2);
+	3-->id15(1);
+	id12(3)-->id16(1);
+	id9(4)-->id17(2);
+	id10(3)-->id18(1);
+	id5(5)-->id19(3);
+	id19(3)-->id20(2);
+	id19(3)-->id21(1);
+	id6(4)-->id22(2);
+	id7(3)-->id23(1);
+	id0(6)-->id24(4);
+	id24(4)-->id25(3);
+	id24(4)-->id28(2);
+	id25(3)-->id26(2);
+	id25(3)-->id27(1);
+	id1(5)-->id29(3);
+	id29(3)-->id30(2);
+	id29(3)-->id31(1);
+	id2(4)-->id32(2);
+	id3(3)-->id33(1);
+```
+
+由上图我们不厌其烦的数一下：
+
+n = 1时，f()调用1次；
+
+n = 2时，f()调用1次；
+
+n = 3时，f()调用3次；  
+
+n = 4时，f()调用5次；
+
+n = 5时，f()调用9次；
+
+n = 6时，f()调用15次；
+
+n = 7时，f()调用25次；
+
+n = 8时，f()调用41次；
+
+增长的是不是太快了，在f()里加一个计数器测试一下，可以看到在n = 30 的时候，f()的调用次数大约在160万。
+
+究其原因，是因为我们在求解的过程时，重复了大量的计算过程， 在n = 8 的时候单单是f(3)就重复调用了8次。
+
+由上我们可以得出一个结论：在求解一个问题的同一实例时，在不同的递归中做重复性的工作，对资源的消耗可能是灾难性的。
+
+
+
+最后归纳一下要牢记的递归四条基本法则：
+
+1. 基准情形。必须总有某些基准情况，它无须递归就能求解，即递归必须有出口。
+2. 不断推进。对于那些需要递归求解的情形，每一次递归调用都必须要使求解状态朝基准情形的方向推进。
+3. 设计法则。假设所有的递归调用都能运行。
+4. 合成效益法则。在求解一个问题的同一实例时，切勿在不同的递归中做重复性的工作。
+
+
+
+
+
+## constexpr
 
 #### 1、const与constexpr：
 
@@ -346,9 +579,9 @@ double ad[] = {100.0, 2, 3, 4};
 double sum2 = sum_v1(ad, ad + 4); //sum2 = 109
 ```
 
-以上抽象出了一个通用版本, 但是类型参数Val不能自动推到获得，显示的指定Val有点不友好。
+以上抽象出了一个通用版本, 但是类型参数Val不能自动推到获得，显式的指定Val有点不友好。
 
-下面针对Val类型参数和加、减、乘、除做进一步抽象
+下面针对Val类型参数、运算符做进一步抽象
 
 ```c++
 template<typename Iter, typename Val, typename Operator>
@@ -449,7 +682,443 @@ struct plus<void>
 
 
 
+## STL容器
 
+### 1、容器概述
+
+#### 1.1、容器分类
+
+**1.1.1、顺序容器**：提供对元素序列的访问，顺序容器为元素连续分配内存或将元素组织为链表，元素的类型是容器成员*value_type*。
+
+|      顺序容器      |                             说明                             |
+| :----------------: | :----------------------------------------------------------: |
+|    vector<T, A>    |          空间连续分配的T类型元素序列；默认选择容器           |
+|     list<T, A>     | T类型元素双向链表；当需要插入/删除元素但不移动已有元素是选择它。 |
+| forward_list<T, A> |         T类型元素单向链表；很短的或空序列的理想选择          |
+|    deque<T, A>     | T类型元素双向队列；向量和链表的混合；对于大多数应用，都比向量和链表其中之一要慢。 |
+
+ 模板参数A是一个分配器，容器用它来分配和释放内存, 默认值 std::allocator<T>。
+
+**1.1.2、有序关联容器**：提供基于关键字的关联查询。
+
+|     有序关联容器     |                 说明                 |
+| :------------------: | :----------------------------------: |
+|   map<K, V, C, A>    | 从K到V的有序映射；一个（K, V）对序列 |
+| multimap<K, V, C, A> |   从K到V的有序映射；允许重复关键字   |
+|     set<K, C, A>     |             K的有序集合              |
+|  multiset<K, C, A>   |     K的有序集合；允许重复关键字      |
+
+C是比较类型，默认值 std::less(K)； A是分配器类型，默认值 std::allocator<std::pair<const K, T>>。这些容器通常采用平衡二叉树（通常红黑树）实现。
+
+**1.1.3、无序关联容器**：
+
+|           有序关联容器            |               说明               |
+| :-------------------------------: | :------------------------------: |
+|   unordered_map<K, V, H, E, A>    |        从K到V的无序映射；        |
+| unordered_multimap<K, V, H, E, A> | 从K到V的无序映射；允许重复关键字 |
+|     unordered_set<K, H, E, A>     |           K的无序集合            |
+|  unordered_multiset<K, H, E, A>   |   K的无序集合；允许重复关键字    |
+
+H是关键字类型K的哈希函数类型，默认值 std::hash<K>。E是关键字类型K的相等性测试函数类型， 默认值 std::equal_to<K>, 用来判断哈希值相同的两个对象是否相等。A是分配器类型。这些容器都是采用溢出链表法的哈希表实现。
+
+关联容器都是链接结构（树），节点类型为其成员*value_type*。
+
+**1.1.4、容器适配器**：提供对底层容器的特殊访问。
+
+|        容器适配器         |               说明               |
+| :-----------------------: | :------------------------------: |
+| priority_queue<T, C, Cmp> | T的优先队列；Cmp是优先级函数类型 |
+|        queue<T, C>        | T的队列，支持push() 和 pop()操作 |
+|        stack<T, C>        |  T的栈，支持push() 和 pop()操作  |
+
+一个priority_queue的默认优先级函数Cmp为std::less<T>。queue的默认容器类型C为std::deque<T>，stack和priority_queue的默认容器类型C为std::vector<T>。
+
+#### 1.2、容器对元素的要求
+
+**1.2.1、比较操作**
+
+注意 C 风格字符串(即const char*)上的 < 比较的是指针值，因此如果用 C 风格字符串作为关键字，关联容器将不能正常工作，为了让这样的关联容器正常工作，就必须使用基于字典序的比较操作。
+
+```c++
+struct Cstring_less
+{
+    bool opreator()(const char *p, const char *q) const
+    {
+        return strcmp(p, q) < 0;
+    }
+};
+
+map<char*, int, Cstring_less> m; //map使用strcmp()比较const
+```
+
+
+
+### 2、操作
+
+#### 2.1、标准库容器操作复杂性
+
+<table>
+    <tr>
+        <td colspan="6" align="center">标准容器操作复杂性</td>
+    </tr>
+    <tr align="center">
+        <td>&nbsp;</td>
+        <td>[]</td>
+        <td>列表</td>
+        <td>头部</td>
+        <td>尾部</td>
+        <td>迭代器</td>
+    </tr>
+    <tr align="center" class="vector">
+        <td>vector</td>
+        <td>常量</td>
+        <td>O(n)+</td>
+        <td>&nbsp;</td>
+        <td>常量+</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="list">
+        <td>list</td>
+        <td>&nbsp;</td>
+        <td>常量</td>
+        <td>常量</td>
+        <td>常量</td>
+        <td>双向</td>
+    </tr>
+    <tr align="center" class="forward_list">
+        <td>forward_list</td>
+        <td>&nbsp;</td>
+        <td>常量</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+        <td>前向</td>
+    </tr>
+    <tr align="center" class="deque">
+        <td>deque</td>
+        <td>常量</td>
+        <td>O(n)</td>
+        <td>常量</td>
+        <td>常量</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="stack">
+        <td>stack</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr align="center" class="queue">
+        <td>queue</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>常量</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr align="center" class="priority_queue">
+        <td>priority_queue</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>O(log(n))</td>
+        <td>O(log(n))</td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr align="center" class="map">
+        <td>map</td>
+        <td>O(log(n))</td>
+        <td>O(log(n))+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>双向</td>
+    </tr>
+    <tr align="center" class="multimap">
+        <td>multimap</td>
+        <td>&nbsp;</td>
+        <td>O(log(n))+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>双向</td>
+    </tr>
+    <tr align="center" class="set">
+        <td>set</td>
+        <td>&nbsp;</td>
+        <td>O(log(n))+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>双向</td>
+    </tr>
+    <tr align="center" class="multiset">
+        <td>multimap</td>
+        <td>&nbsp;</td>
+        <td>O(long(n))+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>双向</td>
+    </tr>
+    <tr align="center" class="unordered_map">
+        <td>unordered_map</td>
+        <td>常量+</td>
+        <td>常量+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>前向</td>
+    </tr>
+    <tr align="center" class="unordered_multimap">
+        <td>unordered_multimap</td>
+        <td>&nbsp;</td>
+        <td>常量+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>前向</td>
+    </tr>
+    <tr align="center" class="unordered_set">
+        <td>unordered_set</td>
+        <td>&nbsp;</td>
+        <td>常量+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>前向</td>
+    </tr>
+    <tr align="center" class="unordered_multiset">
+        <td>unordered_multiset</td>
+        <td>&nbsp;</td>
+        <td>常量+</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>前向</td>
+    </tr>
+    <tr align="center" class="string">
+        <td>string</td>
+        <td>常量</td>
+        <td>O(n)+</td>
+        <td>O(n)+</td>
+        <td>常量+</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="array">
+        <td>array</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="内置数组">
+        <td>内置数组</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="valarray">
+        <td>valarray</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>随机</td>
+    </tr>
+    <tr align="center" class="bitset">
+        <td>bitset</td>
+        <td>常量</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>随机</td>
+    </tr>
+</table>
+
+***头部操作***：表示在第一个元素之前的插入和删除操作。
+
+***尾部操作***：表示在最后一个元素之后的插入和删除操作。
+***列表操作***：表示在任意位置的插入和删除操作。
+
+***迭代器***：“*随机*”表示随机访问迭代器，“*向前*”表示前向迭代器，“*双向*”表示双向迭代器。
+
+***时间复杂度***：
+
+1. 常量又表示为O(1)，表示时间复杂度是个常量，通常代表时间复杂度低。
+2.  O(n)表示操作花费非时间与元素数目成正比，元素增加n倍，操作时间也增加n倍。通常代表时间复杂度较高。
+3. O(n*n)表示元素增加n倍，操作时间就增加n^2倍。通常代表时间复杂度很高，n很大时，对资源消耗来说是灾难。
+4. O(logn)表示元素增加n倍，操作时间增加logn倍（以2为底的对数）。通常代表时间复杂度较低。
+5. O(nlogn)表示元素增加n倍，操作时间增加nlogn倍。时间复杂度高于O(n)低于O(n*n)。
+
+时间复杂度后加 “***+***” 表示时间复杂度可能会更高，如vector增加元素时，可能需要重新分配资源。
+
+值得注意的是，操作效率还取决于计算机的内存和处理器构架的细节，比如通过链接获取下一个元素（list情形）的代价会远高于在一个vector中获取下一个元素的代价（元素是连续存储）。因此对操作效率的评估不能完全简单的依赖于对复杂性的评估，而是要进行实际的测试。
+
+
+
+#### 2.2、容器赋值、移动
+
+1. 赋值操作并不拷贝或移动分配器，目标容器获得一组新的元素，但会保留其旧的分配器，新元素的空间也是用此分配器分配的。
+
+2. 一个构造函数或是一次元素拷贝可能会抛出异常，来指出它无法完成这个任务。
+
+3. 初始化器的潜在二义性。
+
+   ```c++
+   void use()
+   {
+       vector<int> vi{1, 3, 5, 7, 9};  //使用5个整数初始化vector
+       vector<string> vs(7);           //vector初始化为7个空字符串，初始化大小
+       
+       vector<int> vi2;
+       vi2 = {2, 4, 6, 8};         //将4个整数赋予vi2
+       vi2.assign(&vi[1], &vi[4]); //将序列3，5，7赋予vi2
+       
+       vector<string> vs2;
+       vs2 = {"hello", "world"};      //赋予vs2两个字符串
+       vs2.assign("First", "Second"); //运行时错误
+   }
+   ```
+
+   以上代码中，向vs2赋值时发生的错误时传递了一对指针（而不是一个initalizer_list），而两个指针并非指向相同的数组。记住，*对大小初始化器使用(), 而对其它所有初始化器都使用{}*。    
+
+4. 容器通常都很大，因此几乎总是以引用的方式传递容器实参。但是，由于容器都是资源句柄，因此可以高效的以返回值的方式返回容器（隐含使用移动操作）。类似的不想使用别名时，可以用移动的方式传递容器实参。例如：
+
+   ```c++
+   void task(vector<int>&& v);
+   //以返回值的方式返回容器，隐式使用移动操作
+   vector<int> user(vector<int> &large)
+   {
+       vector<int> res;
+       //...
+       task(move(large)); //将数据所有权传递给task()，用移动的方式传递容器实参。
+       //...
+       return res;
+   }
+   ```
+
+
+
+
+#### 2.3、容器的大小和容量
+
+**大小：**指容器中的元素数目。
+
+**容量：**指重新分配更多内存之前容器能够保存的元素数目。
+
+<table>
+    <tr>
+        <td colspan="2" align="center" class="tableTitle">大小和容量</td>
+    </tr>
+    <tr>
+        <td>x = c.size()</td>
+        <td>x是c的元素数目</td>
+    </tr>
+    <tr>
+        <td>c.empty()</td>
+        <td>c为空吗？</td>
+    </tr>    
+    <tr>
+        <td>x = c.max_size()</td>
+        <td>x是c的最大可能元素数目</td>
+    </tr>
+    <tr>
+        <td>x = c.capacity()</td>
+        <td>x是为c分配的空间大小；只适用于vector和string</td>
+    </tr>
+    <tr>
+        <td>c.reserve(n)</td>
+        <td>为c预留n个元素的空间；只适用于vector和string</td>
+    </tr>
+    <tr>
+        <td>c.resize(n)</td>
+        <td>将c的大小改变为n；将增加的元素初始化为默认元素值；只适用于顺序容器和string</td>
+    </tr>
+    <tr>
+        <td>c.resize(n, v)</td>
+        <td>将c的大小改变为n；将增加的元素初始化为v；只适用于顺序容器和string</td>
+    </tr>
+    <tr>
+        <td>c.shrink_to_fit()</td>
+        <td>令c.capacity()等于c.size()；只适用于vector、deque、string</td>
+    </tr>
+    <tr>
+        <td>c.clear()</td>
+        <td>删除c的所有元素</td>
+    </tr>
+</table>
+
+***注意***，在改变大小或容量时，元素可能会被移动到新的存储位置。这意味着指向元素的迭代器(以及指针和引用)可能会失效（即指向旧元素的位置）。
+
+指向关联容器（如map）元素的迭代器只有当所指元素从容器中删除(erase())时才会失效。与之相反，指向顺序容器（如vector）元素的迭代器当元素重新分配空间（如resize()、reverse()、push_back()）或所指元素在容器中移动（如在前一个位置发生了erase()或insert()）时也会失效。
+
+
+
+#### 2.4、迭代器
+
+容器可以看做按容器迭代器定义的顺序或相反的顺序排列的元素序列。对于一个关联容器，元素的顺序由容器比较标准决定。
+
+<table>
+    <tr>
+        <td colspan="2" align="center" class="tableTitle">迭代器</td>
+    </tr>
+    <tr>
+        <td>p = c.begin()</td>
+        <td>p指向c的首元素</td>
+    </tr>
+    <tr>
+        <td>p = c.end()</td>
+        <td>p指向c的尾后元素</td>
+    </tr>
+    <tr>
+        <td>p = c.cbegin()</td>
+        <td>p指向c的首元素，常量迭代器</td>
+    </tr>
+    <tr>
+        <td>p = c.cend()</td>
+        <td>p指向c的尾后元素，常量迭代器</td>
+    </tr>
+    <tr>
+        <td>p = c.rbegin()</td>
+        <td>p指向c的反序的首元素</td>
+    </tr>
+    <tr>
+        <td>p = c.rend()</td>
+        <td>p指向c的反序的尾后元素</td>
+    </tr>
+    <tr>
+        <td>p = c.crbegin()</td>
+        <td>p指向c的反序的首元素，常量迭代器</td>
+    </tr>
+    <tr>
+        <td>p = c.crend()</td>
+        <td>p指向c的反序的尾后元素，常量迭代器</td>
+    </tr>
+</table>
+
+
+
+## vector
+
+除非有充足的理由，否则应该优先选择vector而不是其它顺序容器，vector提供了添加、删除（移除）元素的操作，这些操作都允许vector按需增长或收缩，对于包含少量元素的序列而言，vector是一种完美的支持列表操作的数据结构。如果希望使用链表或内置数组替代vector，应该慎重考虑后再做决定。
+
+#### 1、vector和增长
+
+可以使用 reserve() 来提高重新分配延迟的可预测性以及避免指针和迭代器失效。
+
+容量的概念令指向vector元素的迭代器只有在真正发生重分配时才会失效。即在使用元素迭代器或指针时，一定要注意vector是否发生了重新分配。
+
+
+
+#### 2、vector和嵌套
+
+vector主要的三个优势：
+
+* vector的元素是紧凑存储的，所有元素都不存在额外的内存开销。vector<X> 的vec的内存消耗大致为sizeof(vector<X>) + vec.size() * sizeof(X)，其中sizeof(vector<X>)大约为12个字节，对于大向量而言是很小的。
+* vector的遍历非常快。为访问下一个元素，不必利用指针间接寻址，而且对类vector结构上的连续访问，现代计算机进行了优化。这使得vector元素的线性扫描（find() 和 copy()）接近最优。
+* vector支持简单且高效的随机访问。这使得vector上的很多算法( 如 sort()  和 binary_search())都非常高效。
+
+#### 3、vector和数组
+
+
+
+#### 4、vector和string
 
 
 
