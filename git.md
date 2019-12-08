@@ -1,4 +1,4 @@
-###   1、创建版本库  //repository
+###   1、创建版本库  
 
 mkdir repositoryName
 cd repositoryName
